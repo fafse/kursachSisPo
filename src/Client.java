@@ -4,12 +4,17 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Scanner;
 
 public class Client {
-
+    Scanner scanner=new Scanner(System.in, "cp866");
+    String address;
 
     public void startClient(int port) throws IOException {
-        Socket socket = new Socket("localhost", 12345);
+        System.out.print("Enter address of server");
+        System.out.println();
+        address = scanner.nextLine();
+        Socket socket = new Socket("192.168.1.102", 12345);
         System.out.println("Соединение установлено");
 //s
         BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
