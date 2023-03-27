@@ -11,7 +11,7 @@ public class Client {
     public void startClient(int port) throws IOException {
         Socket socket = new Socket("localhost", 12345);
         System.out.println("Соединение установлено");
-
+//s
         BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 
