@@ -1,106 +1,79 @@
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Scanner;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-
-
 public class Server {
-    int count;
-    public BlockingQueue<ClientHandler> clientArrayList = new LinkedBlockingQueue<ClientHandler>();
-    private List<String> commandList = new LinkedList<>();
-
-    private void initializeCommandList()
-    {
-        commandList.clear();
-        //commandList.add()
-    }
 
     public void startServer(int port) throws IOException {
-        ServerSocket serverSocket = null;
-        try {
-            initializeCommandList();
-            serverSocket = new ServerSocket(port);
-            System.out.println("Server started");
+        // Создаем серверный сокет и привязываем его к порту
+        ServerSocket serverSocket = new ServerSocket(port);
+        System.out.println("Сервер запущен");
 
-            do {
-                Socket newSocket = serverSocket.accept();
-                ClientHandler client = new ClientHandler(newSocket);
-                Thread thread = new Thread(client);
-                thread.start();
-                clientArrayList.add(client);
+        // Бесконечный цикл ожидания клиентов
+        while (true) {
+            // Ожидаем подключения клиента
+            Socket clientSocket = serverSocket.accept();
+            System.out.println("Новый клиент подключился: " + clientSocket.getInetAddress().getHostAddress());
 
-            } while (!clientArrayList.isEmpty());
-
-
-        } catch (IOException e) {
-            System.out.println("Launch error");
-        }finally {
-            serverSocket.close();
+            // Создаем новый поток для обработки клиента
+            ClientHandler clientHandler = new ClientHandler(clientSocket);
+            Thread thread = new Thread(clientHandler);
+            thread.start();
         }
-
     }
 
-    class ClientHandler implements Runnable {
+    private static double calculate(String command) {
+        String[] tokens = command.split(" ");
+        double result = 0.0;
+        switch (tokens[0]) {
+            case "add":
+                result = Double.parseDouble(tokens[1]) + Double.parseDouble(tokens[2]);
+                break;
+            case "subtract":
+                result = Double.parseDouble(tokens[1]) - Double.parseDouble(tokens[2]);
+                break;
+            case "multiply":
+                result = Double.parseDouble(tokens[1]) * Double.parseDouble(tokens[2]);
+                break;
+            case "divide":
+                result = Double.parseDouble(tokens[1]) / Double.parseDouble(tokens[2]);
+                break;
+            default:
+                System.out.println("Неподдерживаемая команда: " + tokens[0]);
+                break;
+        }
+        return result;
+    }
 
-        Socket socket;
-        Writer writer;
-        String name;
+    private static class ClientHandler implements Runnable {
+        private final Socket clientSocket;
 
-        public ClientHandler(Socket socket) {
-            this.socket = socket;
-
+        public ClientHandler(Socket clientSocket) {
+            this.clientSocket = clientSocket;
         }
 
         @Override
         public void run() {
+            try {
+                BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
 
-            try (InputStream inputStream = socket.getInputStream()) {
-
-                Scanner scanner = new Scanner(inputStream, "utf-8");
-                String message;
-                this.name = scanner.nextLine();
-                message = this.name+" connected";
-                sendMessage(message);
-
-                while (socket.isConnected()) {
-                    message = scanner.nextLine();
-                    if (message.equals("quit")) {
-                        System.out.println(this.name + " disconnected");
-                        message = this.name+ " disconnected.";
-                        sendMessage(message);
-                        clientArrayList.remove(this);
+                String inputLine;
+                while ((inputLine = in.readLine()) != null) {
+                    System.out.println("Клиент отправил сообщение: " + inputLine);
+                    if (inputLine.equals("exit")) {
                         break;
                     }
-
-                    System.out.println(message);
-                    sendMessage(message);
-
+                    double result = calculate(inputLine);
+                    out.println(result);
                 }
-
+                System.out.println("Клиент отключился");
+                clientSocket.close();
             } catch (IOException e) {
-                System.out.println(Thread.currentThread().toString() + " not initialized");
-            }
-
-        }
-
-        private void sendMessage(String message) throws IOException {
-            for (ClientHandler handler : clientArrayList) {
-
-                if (handler.equals(this)) continue;
-
-                if (handler.socket.isConnected()) {
-                    Writer writer = new OutputStreamWriter(handler.socket.getOutputStream(), "utf-8");
-                    writer.write(message + "\n");
-                    writer.flush();
-                } else {
-                    System.out.println("Client " + handler.name + " is unavailable");
-                }
-
+                e.printStackTrace();
             }
         }
     }

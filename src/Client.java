@@ -1,101 +1,36 @@
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.NoSuchElementException;
-import java.util.Scanner;
 
 public class Client {
-    String name;
-    Scanner scanner=new Scanner(System.in, "cp866");
-    String address;
-    OutputStreamWriter writer;
 
 
     public void startClient(int port) throws IOException {
-        System.out.print("Enter address of server");
-        System.out.println();
-        address = scanner.nextLine();
+        Socket socket = new Socket("localhost", 12345);
+        System.out.println("Соединение установлено");
 
-        ChatListener chatListener = null;
-        try (Socket socket = new Socket(address, port)) {
+        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 
-
-            writer = new OutputStreamWriter(socket.getOutputStream(), "utf-8");
-
-            chatListener = new ChatListener(socket);
-            Thread thread = new Thread(chatListener);
-
-            thread.start();
-
-            System.out.print("Enter nickname");
-            System.out.println();
-            this.name = scanner.nextLine();
-            writer.write(this.name + "\n");
-            writer.flush();
-
-            String message;
-
-            System.out.println("To leave print 'quit'");
-            while (true) {
-                message = scanner.nextLine();
-                if (message.toLowerCase().equals("quit")) {
-                    writer.write(message + "\n");
-                    writer.flush();
-                    chatListener.isWork = false;
-                    break;
-                } else {
-                    writer.write(this.name +">:"+message + "\n");
-                    writer.flush();
-                }
-
+        BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in));
+        String userInput;
+        while (true) {
+            System.out.print("> ");
+            userInput = stdIn.readLine();
+            if (userInput == null) {
+                break;
             }
-        } catch (IOException e) {
-            System.out.println("Connection error");
-            this.startClient(port);
-
-        } finally {
-            writer.close();
-            scanner.close();
-
-        }
-
-    }
-
-    class ChatListener implements Runnable {
-
-        boolean isWork = true;
-
-        Socket socket;
-
-        public ChatListener(Socket socket) {
-            this.socket = socket;
-        }
-
-        @Override
-        public void run() {
-            try (Scanner scanner = new Scanner(socket.getInputStream(), "utf-8")) {
-
-                while (true) {
-
-                    if(isWork) {
-                        try {
-                            System.out.println(scanner.nextLine());
-                        } catch (NoSuchElementException e){
-                            System.out.println("Bye");
-                            break;
-                        }
-
-                    } else {
-                        scanner.close();
-                        socket.close();
-                        break;
-                    }
-
-                }
-
-            } catch (IOException e) {
-                System.out.println(e);
+            out.println(userInput);
+            if (userInput.equals("exit")) {
+                break;
             }
-
+            String serverResponse = in.readLine();
+            System.out.println("Сервер ответил: " + serverResponse);
         }
+        System.out.println("Соединение разорвано");
+        socket.close();
     }
 }
