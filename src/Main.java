@@ -9,7 +9,7 @@ public class Main {
         System.out.println("Who I am?\n1. Server\n2. Client\n");
         menu = cin.nextInt();
         cin.nextLine();
-        int port = 2022;
+        int port = 2023;
         switch (menu)
         {
             case 1:

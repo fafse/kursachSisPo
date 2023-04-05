@@ -4,21 +4,18 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Date;
+
 
 public class Server {
 
     public void startServer(int port) throws IOException {
-        // Создаем серверный сокет и привязываем его к порту
         ServerSocket serverSocket = new ServerSocket(port);
-        System.out.println("Сервер запущен");
+        System.out.println("Server started");
 
-        // Бесконечный цикл ожидания клиентов
         while (true) {
-            // Ожидаем подключения клиента
             Socket clientSocket = serverSocket.accept();
-            System.out.println("Новый клиент подключился: " + clientSocket.getInetAddress().getHostAddress());
-
-            // Создаем новый поток для обработки клиента
+            System.out.println("New client connected: " + clientSocket.getInetAddress().getHostAddress());
             ClientHandler clientHandler = new ClientHandler(clientSocket);
             Thread thread = new Thread(clientHandler);
             thread.start();
@@ -42,7 +39,7 @@ public class Server {
                 result = Double.parseDouble(tokens[1]) / Double.parseDouble(tokens[2]);
                 break;
             default:
-                System.out.println("Неподдерживаемая команда: " + tokens[0]);
+                System.out.println("Unavailable command: " + tokens[0]);
                 break;
         }
         return result;
@@ -63,14 +60,17 @@ public class Server {
 
                 String inputLine;
                 while ((inputLine = in.readLine()) != null) {
-                    System.out.println("Клиент отправил сообщение: " + inputLine);
+                    Date date = new Date();
+
+                    System.out.println(date.toString() +"\nClient sent message: " + inputLine);
                     if (inputLine.equals("exit")) {
                         break;
                     }
                     double result = calculate(inputLine);
-                    out.println(result);
+                    date = new Date();
+                    out.println(date.toString()+":"+result);
                 }
-                System.out.println("Клиент отключился");
+                System.out.println("Client disconnected");
                 clientSocket.close();
             } catch (IOException e) {
                 e.printStackTrace();
