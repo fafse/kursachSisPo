@@ -1,3 +1,4 @@
+package src;
 public class MD5Hasher implements Runnable{
     private long begin;
     public static volatile boolean is_password_found = false;
@@ -20,10 +21,10 @@ public class MD5Hasher implements Runnable{
     public void run() {
         for (long i = begin; i <= end && !is_password_found; i++) {
             String password = createPassword(i).toString();
-            if (Server.hashPassword(password).equals(hex_password)) {
-                is_password_found = true;
-                foundPassword=password;
-            }
+            //if (src.Server.hashPassword(password).equals(hex_password)) {
+                //is_password_found = true;
+              //  foundPassword=password;
+            //}
         }
     }
 

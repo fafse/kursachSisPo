@@ -1,15 +1,19 @@
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.ServerSocket;
-import java.net.Socket;
+package src;
+
+import java.io.*;
+        import java.net.ServerSocket;
+        import java.net.Socket;
+
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Date;
+import java.util.Scanner;
+        import java.util.concurrent.BlockingQueue;
+        import java.util.concurrent.LinkedBlockingQueue;
 
 
 public class Server {
+    int count;
+    public BlockingQueue<ClientHandler> clientArrayList = new LinkedBlockingQueue<ClientHandler>();
     private static final char[] HEX_DIGITS = "0123456789ABCDEF".toCharArray();
     public static String[] elements = {"qwertyuiopasdfghjklzxcvbnm"};
     private static String toHexString(byte[] bytes) {
@@ -42,7 +46,7 @@ public class Server {
         long t0 = System.nanoTime();
         for(int i = 0;i<numThreads;i++)
         {
-            threads[i] = new Thread(new MD5Hasher((long)numPassword*(i)/numThreads,(long)numPassword*(i+1)/numThreads,hex_password));
+            threads[i] = new Thread(new src.MD5Hasher((long)numPassword*(i)/numThreads,(long)numPassword*(i+1)/numThreads,hex_password));
             threads[i].start();
         }
         for(int i = 0;i<numThreads;i++)
@@ -55,85 +59,93 @@ public class Server {
         }
         long t = System.nanoTime()-t0;
         System.out.println(t/1e9 +" Seconds required to solve this problem");
-        return MD5Hasher.getFoundPassword();
+        return src.MD5Hasher.getFoundPassword();
     }
+    public void StartServer(int port) throws IOException {
+        ServerSocket serverSocket = null;
+        try {
+            serverSocket = new ServerSocket(port);
+            System.out.println("Server started");
 
-    public void startServer(int port) throws IOException {
-        ServerSocket serverSocket = new ServerSocket(port);
-        System.out.println("Server started");
+            do {
+                System.out.println("I wait connection");
+                Socket newSocket = serverSocket.accept();
+                System.out.println("New tried connect");
+                ClientHandler client = new ClientHandler(newSocket);
+                Thread thread = new Thread(client);
+                thread.start();
+                System.out.println("connected");
+                clientArrayList.add(client);
 
-        while (true) {
-            Socket clientSocket = serverSocket.accept();
-            System.out.println("New client connected: " + clientSocket.getInetAddress().getHostAddress());
-            ClientHandler clientHandler = new ClientHandler(clientSocket);
-            Thread thread = new Thread(clientHandler);
-            thread.start();
+            } while (!clientArrayList.isEmpty());
+
+        } catch (IOException e) {
+            System.out.println("Launch error");
+        }finally {
+            serverSocket.close();
         }
+
     }
 
-    private static String calculate(String command) {
-        String[] tokens = command.split(" ");
-        String result = "";
-        switch (tokens[0]) {
-            case "add":
-                result = String.valueOf((Double.parseDouble(tokens[1]) + Double.parseDouble(tokens[2])));
-                break;
-            case "subtract":
-                result = String.valueOf(Double.parseDouble(tokens[1]) - Double.parseDouble(tokens[2]));
-                break;
-            case "multiply":
-                result = String.valueOf(Double.parseDouble(tokens[1]) * Double.parseDouble(tokens[2]));
-                break;
-            case "divide":
-                result = String.valueOf(Double.parseDouble(tokens[1]) / Double.parseDouble(tokens[2]));
-                break;
-            case "DeshMD5":
-                if(tokens.length ==3)
-                result= findMD5(tokens[1], Integer.parseInt(tokens[2]));
-                else
-                    result=findMD5(tokens[1], 100);
-                MD5Hasher.makeDefault();
-                break;
-            case "MD5":
-                result= hashPassword(tokens[1]);
-                break;
-            default:
-                System.out.println("Unavailable command: " + tokens[0]);
-                break;
-        }
-        return result;
-    }
+    class ClientHandler implements Runnable {
 
-    private static class ClientHandler implements Runnable {
-        private final Socket clientSocket;
+        Socket socket;
+        Writer writer;
+        String name;
 
-        public ClientHandler(Socket clientSocket) {
-            this.clientSocket = clientSocket;
+        public ClientHandler(Socket socket) {
+            this.socket = socket;
+
         }
 
         @Override
         public void run() {
-            try {
-                BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
 
-                String inputLine;
-                while ((inputLine = in.readLine()) != null) {
-                    Date date = new Date();
+            try (InputStream inputStream = socket.getInputStream()) {
 
-                    System.out.println(date.toString() +"\nClient sent message: " + inputLine);
-                    if (inputLine.equals("exit")) {
+                Scanner scanner = new Scanner(inputStream, "utf-8");
+                String message;
+                System.out.println("I try read name");
+                this.name = scanner.nextLine();
+                System.out.println("I read name");
+                message = this.name+" connected";
+                sendMessage(message);
+                System.out.println("Got name");
+                while (socket.isConnected()) {
+                    System.out.println("I read message");
+                    message = scanner.nextLine();
+                    if (message.equals("quit")) {
+                        System.out.println(this.name + " disconnected");
+                        message = this.name+ " disconnected.";
+                        sendMessage(message);
+                        clientArrayList.remove(this);
                         break;
                     }
-                    String result = calculate(inputLine);
-                    date = new Date();
-                    if(result.length()!=0)
-                        out.println(date.toString()+":"+result);
+                    System.out.println(message);
+                    sendMessage(message);
+
                 }
-                System.out.println("Client disconnected");
-                clientSocket.close();
+
             } catch (IOException e) {
-                e.printStackTrace();
+                System.out.println(Thread.currentThread().toString() + " not initialized");
+            }
+
+        }
+
+        private void sendMessage(String message) throws IOException {
+            for (ClientHandler handler : clientArrayList) {
+
+                if (handler.equals(this)) continue;
+
+                if (handler.socket.isConnected()) {
+                    Writer writer = new OutputStreamWriter(handler.socket.getOutputStream(), "utf-8");
+                    System.out.println(this.name+">:\n"+message);
+                    writer.write(message + "\n");
+                    writer.flush();
+                } else {
+                    System.out.println("Client " + handler.name + " unavailable");
+                }
+
             }
         }
     }

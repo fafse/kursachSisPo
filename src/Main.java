@@ -1,9 +1,14 @@
+package src;
+
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.IOException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Scanner;
 
 public class Main {
+
+
 
     public static void main(String[] args) throws IOException {
         int menu=0;
@@ -17,7 +22,7 @@ public class Main {
             case 1:
             {
                 try {
-                    new Server().startServer(port);
+                    new src.Server().StartServer(port);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -25,7 +30,7 @@ public class Main {
             }
             case 2:
             {
-                new Client().startClient(port);
+                new src.Client().startClient(port);
                 break;
             }
             default:
