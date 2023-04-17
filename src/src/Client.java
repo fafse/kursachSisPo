@@ -62,12 +62,10 @@ import javax.swing.event.AncestorListener;
 public class Client {
     String name;
     int port;
-    JTextField textField; // принимает до 10 символов
+    JTextField textField;
     String address;
-    OutputStreamWriter writer;
-    BufferedReader reader;
-    Scanner scanner=new Scanner(System.in, "cp866");
-
+    Writer writer;
+    Scanner reader;
     JFrame frame;
     JMenuBar mb;
     JTextArea textArea;
@@ -84,23 +82,28 @@ public class Client {
         @Override
         public void actionPerformed(ActionEvent e) {
             String[] rules = Client.getRules();
-            for(int i = 0;i<10;i++)
-            {
-                textArea.append(rules[i]+"\n");
+            for (int i = 0; i < 10; i++) {
+                textArea.append(rules[i] + "\n");
             }
         }
     };
-
-    public void ListenThread()
-    {
-
-    }
 
 
     ActionListener actionListenerSendButton = new ActionListener() {
         @Override
         public void actionPerformed(ActionEvent e) {
-
+            try {
+                String message = textField.getText();
+                if(message.toLowerCase().equals("quit")) {
+                    writer.write(message + "\n");
+                } else {
+                    writer.write(name + ">:" + message + "\n");
+                }
+                printToUser(message);
+                writer.flush();
+            } catch (IOException ex) {
+                System.out.println(ex);
+            }
         }
     };
 
@@ -108,8 +111,8 @@ public class Client {
         @Override
         public void actionPerformed(ActionEvent e) {
             printToUser(textField.getText());
-            address= addressField.getText();
-            name=nameField.getText();
+            address = addressField.getText();
+            name = nameField.getText();
             System.out.println(address);
             System.out.println(name);
             ChatListener chatListener = null;
@@ -118,39 +121,24 @@ public class Client {
                 nameField.setEditable(false);
                 addressField.setEditable(false);
 
-                reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
-                writer = new OutputStreamWriter(socket.getOutputStream(), "utf-8");
+                writer=new OutputStreamWriter(socket.getOutputStream());
+                reader=new Scanner(socket.getInputStream());
 
                 chatListener = new ChatListener(socket);
+                chatListener.isWork=true;
                 Thread thread = new Thread(chatListener);
 
                 thread.start();
+                System.out.println("I here");
                 writer.write(name + "\n");
                 writer.flush();
 
-                String message;
-
-                printToUser("To leave print 'quit'");
-                while (true) {
-                    message= scanner.nextLine();
-                    if (message.toLowerCase().equals("quit")) {
-                        writer.write(message + "\n");
-                        writer.flush();
-                        chatListener.isWork = false;
-                        break;
-                    } else {
-                        writer.write(name +">:"+message + "\n");
-                        writer.flush();
-                    }
-                    String serverResponse = reader.readLine();
-                    System.out.println("Сервер ответил: " + serverResponse);
-                }
+                printToUser("To leave print 'quit'dasdsa");
             } catch (IOException ex) {
                 printToUser("Connection error");
 
             } finally {
-                if(writer!=null) {
+                if (writer != null) {
                     try {
                         writer.close();
                     } catch (IOException ex) {
@@ -161,51 +149,51 @@ public class Client {
             }
         }
     };
-    public static String[] getRules()
-    {
+
+    public static String[] getRules() {
         String[] rules = new String[10];
         rules[0] = "Commands:";
         rules[1] = "===================================================";
-        rules[2] ="1. add\nExample of using:\nadd 5 3\nServer will answer:8";
-        rules[3] ="2. subtract\nExample of using:\nsubtract 5 3\nServer will answer:2";
-        rules[4] ="3. multiply\nExample of using:\nmultiply 5 3\nServer will answer:15";
-        rules[5] ="4. divide\nExample of using:\ndivide 6 3\nServer will answer:2";
-        rules[6] ="5. MD5\n Example of using:\nMD5 torules\nServer will answer:";
-        rules[7] ="6. DeshMD5\nExample of using:\nDeshMd5 39D89CD686B43C82A7509A638A4AB6DD 100\nServer will answer:rulesss\nATTENTION:\n" +
+        rules[2] = "1. add\nExample of using:\nadd 5 3\nServer will answer:8";
+        rules[3] = "2. subtract\nExample of using:\nsubtract 5 3\nServer will answer:2";
+        rules[4] = "3. multiply\nExample of using:\nmultiply 5 3\nServer will answer:15";
+        rules[5] = "4. divide\nExample of using:\ndivide 6 3\nServer will answer:2";
+        rules[6] = "5. MD5\n Example of using:\nMD5 torules\nServer will answer:";
+        rules[7] = "6. DeshMD5\nExample of using:\nDeshMd5 39D89CD686B43C82A7509A638A4AB6DD 100\nServer will answer:rulesss\nATTENTION:\n" +
                 "This command is available for 7 letter message(in decrypted form)";
-        rules[8] ="7. help\nExample of using:\nhelp\nServer will write this note.";
+        rules[8] = "7. help\nExample of using:\nhelp\nServer will write this note.";
         rules[9] = "===================================================";
         return rules;
     }
 
-    private void printToUser(String message)
-    {
-        textArea.append(message+"\n");
+    private void printToUser(String message) {
+        textArea.append(message + "\n");
     }
 
     public void startClient(int port) {
-        this.port=port;
+        this.port = port;
         frame = new JFrame("Chat");
         mb = new JMenuBar();
-         textArea = new JTextArea();
-         textArea.setEditable(false);
-        JScrollPane scroll = new JScrollPane (textArea,
+        textArea = new JTextArea();
+        textArea.setEditable(false);
+        JScrollPane scroll = new JScrollPane(textArea,
                 JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
-         helpButton = new JButton("Help");
-         ConnectButton = new JButton("Соединиться");
-         panel = new JPanel(); // панель не видна при выводе
-         label = new JLabel("Введите текст");
-         textField = new JTextField(20); // принимает до 50 символов
-        nameField= new JTextField(15);
-        nameField.setText("Ник");
+        helpButton = new JButton("Help");
+        ConnectButton = new JButton("Connect");
+        panel = new JPanel();
+        label = new JLabel("Enter text");
+        textField = new JTextField(20);
+        nameField = new JTextField(15);
+        nameField.setText("Nickname");
         addressField = new JTextField(11);
-        addressField.setText("Адрес");
-         sendButton = new JButton("Отправить");
-         reset = new JButton("Сброс");
+        addressField.setText("localhost");
+        sendButton = new JButton("Send");
+        reset = new JButton("Clear");
 
-         textField.setEditable(false);
+        textField.setEditable(false);
         helpButton.addActionListener(actionListenerHelpButton);
         ConnectButton.addActionListener(actionListenerConnectButton);
+        sendButton.addActionListener(actionListenerSendButton);
 
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(600, 600);
@@ -215,14 +203,12 @@ public class Client {
         mb.add(addressField);
         mb.add(ConnectButton);
 
-        // Создание панели внизу и добавление компонентов
 
-        panel.add(label); // Компоненты, добавленные с помощью макета Flow Layout
+        panel.add(label);
         panel.add(textField);
         panel.add(sendButton);
         panel.add(reset);
 
-        // Добавление компонентов в рамку.
         frame.getContentPane().add(BorderLayout.SOUTH, panel);
         frame.getContentPane().add(BorderLayout.NORTH, mb);
         frame.add(scroll);
@@ -231,7 +217,7 @@ public class Client {
 
     class ChatListener implements Runnable {
 
-        boolean isWork = true;
+        public boolean isWork = true;
 
         Socket socket;
 
@@ -243,10 +229,12 @@ public class Client {
         public void run() {
             try (Scanner scanner = new Scanner(socket.getInputStream(), "utf-8")) {
                 while (true) {
-                    if(isWork) {
+                    if (isWork) {
                         try {
-                            System.out.println(scanner.nextLine());
-                        } catch (NoSuchElementException e){
+                            String message= reader.nextLine();
+                            System.out.println(message);
+                            //printToUser(message);
+                        } catch (NoSuchElementException e) {
                             System.out.println("Bye");
                             break;
                         }
@@ -255,13 +243,11 @@ public class Client {
                         socket.close();
                         break;
                     }
-
                 }
-
             } catch (IOException e) {
-                System.out.println(e);
+                printToUser("Server is unavailable\n");
+                throw new RuntimeException(e);
             }
-
         }
     }
 }

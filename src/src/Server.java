@@ -91,6 +91,7 @@ public class Server {
 
         Socket socket;
         Writer writer;
+        Scanner reader;
         String name;
 
         public ClientHandler(Socket socket) {
@@ -103,7 +104,13 @@ public class Server {
 
             try (InputStream inputStream = socket.getInputStream()) {
 
-                Scanner scanner = new Scanner(inputStream, "utf-8");
+                Scanner scanner = new Scanner(inputStream);
+                try {
+                    writer=new OutputStreamWriter(socket.getOutputStream());
+                    reader=new Scanner(socket.getInputStream());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
                 String message;
                 System.out.println("I try read name");
                 this.name = scanner.nextLine();
@@ -111,6 +118,8 @@ public class Server {
                 message = this.name+" connected";
                 sendMessage(message);
                 System.out.println("Got name");
+                sendMessage("one\n");
+                sendMessage("two\n");
                 while (socket.isConnected()) {
                     System.out.println("I read message");
                     message = scanner.nextLine();
@@ -123,29 +132,24 @@ public class Server {
                     }
                     System.out.println(message);
                     sendMessage(message);
-
                 }
 
-            } catch (IOException e) {
+            } catch (IOException ex) {
                 System.out.println(Thread.currentThread().toString() + " not initialized");
             }
 
         }
 
-        private void sendMessage(String message) throws IOException {
-            for (ClientHandler handler : clientArrayList) {
-
-                if (handler.equals(this)) continue;
-
-                if (handler.socket.isConnected()) {
-                    Writer writer = new OutputStreamWriter(handler.socket.getOutputStream(), "utf-8");
-                    System.out.println(this.name+">:\n"+message);
+        private void sendMessage(String message) {
+            try {
+                if (socket.isConnected()) {
+                    System.out.println("I try write"+message);
                     writer.write(message + "\n");
                     writer.flush();
                 } else {
-                    System.out.println("Client " + handler.name + " unavailable");
-                }
-
+                    System.out.println("Client " + name + " unavailable");
+                }} catch (IOException e) {
+                throw new RuntimeException(e);
             }
         }
     }
